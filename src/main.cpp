@@ -65,11 +65,7 @@ struct holder_shared_int32_type {
 static_assert(ywl::miscellaneous::is_shared_resource_holder_hint_type<holder_shared_int32_type>);
 
 int main() {
-    auto logger = ywl::util::logger_builder{}
-        .set_os(std::cout)
-        .set_level("INFO")
-        .set_source("main")
-        .build();
+    auto &logger = ywl::util::default_logger;
 
     logger["Hi, mom!"];
     logger.log_fmt("Hi, dad!");
@@ -98,8 +94,8 @@ int main() {
 
     logger[id1, id2];
 
-    id_gen.free(std::move(id1));
-    id_gen.free(std::move(id2));
+    id_gen.free(std::move(id1)); // NOLINT
+    id_gen.free(std::move(id2)); // NOLINT
 
     id1 = id_gen.generate();
     id2 = id_gen.generate();
