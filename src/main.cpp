@@ -64,8 +64,61 @@ struct holder_shared_int32_type {
 
 static_assert(ywl::miscellaneous::is_shared_resource_holder_hint_type<holder_shared_int32_type>);
 
+void fn_const_ptr(const int *ptr) {
+    std::cout << "fn_const_ptr: " << *ptr << std::endl;
+}
+
+void fn_ptr(int *ptr) {
+    std::cout << "fn_ptr: " << *ptr << std::endl;
+}
+
 int main() {
     auto &logger = ywl::util::default_logger;
+
+    /*struct A {
+        int a;
+        operator int() const {
+            return a;
+        }
+    };
+
+    struct B {
+        operator A() const {
+            return A{42};
+        }
+    };*/
+
+    /*static_assert(std::is_same_v<decltype(A{}), A>);
+    static_assert(std::is_same_v<decltype((A{})), A>);
+
+    static_assert(std::is_same_v<decltype(A{}.a), int>);
+    static_assert(std::is_same_v<decltype((A{}.a)), int &&>);
+
+    [[maybe_unused]] A ins = A{};
+
+    static_assert(std::is_same_v<decltype(ins), A>);
+    static_assert(std::is_same_v<decltype((ins)), A &>);
+
+    static_assert(std::is_same_v<decltype(ins.a), int>);
+    static_assert(std::is_same_v<decltype((ins.a)), int &>);
+
+    [[maybe_unused]] A &&rref = A{};
+
+    static_assert(std::is_same_v<decltype(rref.a), int>);
+    static_assert(std::is_same_v<decltype((rref.a)), int &>);
+
+    static_assert(std::is_same_v<decltype(std::move(rref).a), int>);
+    static_assert(std::is_same_v<decltype((std::move(rref).a)), int &&>);
+
+    auto [str] = A{};
+    static_assert(std::is_same_v<decltype(str), int>);*/
+
+    struct A {
+        int a;
+        operator int() const {
+            return a;
+        }
+    };
 
     logger["Hi, mom!"];
     logger.log_fmt("Hi, dad!");
