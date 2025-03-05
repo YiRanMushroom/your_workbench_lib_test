@@ -64,99 +64,32 @@ struct holder_shared_int32_type {
 
 static_assert(ywl::miscellaneous::is_shared_resource_holder_hint_type<holder_shared_int32_type>);
 
-void fn_const_ptr(const int *ptr) {
-    std::cout << "fn_const_ptr: " << *ptr << std::endl;
-}
-
-void fn_ptr(int *ptr) {
-    std::cout << "fn_ptr: " << *ptr << std::endl;
-}
-
 int main() {
-    auto &logger = ywl::util::default_logger;
+    auto &&logger = ywl::util::default_logger;
 
-    /*struct A {
-        int a;
-        operator int() const {
-            return a;
-        }
+    std::string str = "Hello, World!";
+
+    ywl::miscellaneous::simple_buffer buffer{};
+    buffer.push_back(str);
+
+    logger[buffer.pop_back<std::string>()];
+
+    std::vector<std::string> vec = {"Hello", "World", "!"};
+    buffer.push_back(vec);
+
+    logger[buffer.pop_back<std::vector<std::string> >()];
+
+    std::unordered_map<std::string, std::tuple<int, double, std::string> > map = {
+        {"Hello", {1, 3.14, "World"}},
+        {"World", {2, 6.28, "!"}}
     };
 
-    struct B {
-        operator A() const {
-            return A{42};
-        }
-    };*/
+    buffer.push_back(map);
 
-    /*static_assert(std::is_same_v<decltype(A{}), A>);
-    static_assert(std::is_same_v<decltype((A{})), A>);
-
-    static_assert(std::is_same_v<decltype(A{}.a), int>);
-    static_assert(std::is_same_v<decltype((A{}.a)), int &&>);
-
-    [[maybe_unused]] A ins = A{};
-
-    static_assert(std::is_same_v<decltype(ins), A>);
-    static_assert(std::is_same_v<decltype((ins)), A &>);
-
-    static_assert(std::is_same_v<decltype(ins.a), int>);
-    static_assert(std::is_same_v<decltype((ins.a)), int &>);
-
-    [[maybe_unused]] A &&rref = A{};
-
-    static_assert(std::is_same_v<decltype(rref.a), int>);
-    static_assert(std::is_same_v<decltype((rref.a)), int &>);
-
-    static_assert(std::is_same_v<decltype(std::move(rref).a), int>);
-    static_assert(std::is_same_v<decltype((std::move(rref).a)), int &&>);
-
-    auto [str] = A{};
-    static_assert(std::is_same_v<decltype(str), int>);*/
-
-    struct A {
-        int a;
-        operator int() const {
-            return a;
-        }
-    };
-
-    logger["Hi, mom!"];
-    logger.log_fmt("Hi, dad!");
-
-    logger.log_no_fmt("Hi, {}!", "mom");
-    logger.log_fmt("Hi, {}!", "dad");
-
-    MyType obj{42};
-    logger("obj: {}", obj);
-
-    std::unordered_map<int, int> map{{1, 2}, {3, 4}};
-
-    logger("map: {}", map);
-
-    auto random_gen = ywl::miscellaneous::random_generator_real(0., 100.);
-    logger("random_gen: {}", random_gen());
-
-    ywl::miscellaneous::scoped_timer timer;
-
-    logger[timer.stop_and_report()];
-
-    auto id_gen = ywl::miscellaneous::discrete_id_generator{};
-
-    auto id1 = id_gen.generate();
-    auto id2 = id_gen.generate();
-
-    logger[id1, id2];
-
-    id_gen.free(std::move(id1)); // NOLINT
-    id_gen.free(std::move(id2)); // NOLINT
-
-    id1 = id_gen.generate();
-    id2 = id_gen.generate();
-
-    logger[id1, id2];
+    logger[buffer.pop_back<std::unordered_map<std::string, std::tuple<int, double, std::string> > >()];
 
     using unique_int32_holder = ywl::miscellaneous::unique_holder<ywl::miscellaneous::unique_hint_base_default<
-        uint32_t, int32_constructor_type, int32_destructor_type, 0> >;
+        uint32_t, int32_constructor_type, int32_destructor_type> >;
     // additional tests for unique_holder
     {
         // Test default constructor and has_value
