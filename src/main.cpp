@@ -150,7 +150,7 @@ int main() {
         std::jthread thread1{
             [&holder_original] {
                 std::vector<shared_int32_holder> holders1;
-                for (int i = 0; i < 10000000; ++i) {
+                for (int i = 0; i < 10000; ++i) {
                     holders1.emplace_back(holder_original);
                 }
             }
@@ -159,7 +159,7 @@ int main() {
         std::jthread thread2{
             [&holder_original] {
                 std::vector<shared_int32_holder> holders2;
-                for (int i = 0; i < 10000000; ++i) {
+                for (int i = 0; i < 10000; ++i) {
 
                     holders2.emplace_back(holder_original);
                 }
@@ -169,7 +169,7 @@ int main() {
         std::jthread thread3{
             [&holder_original] {
                 std::vector<shared_int32_holder::weak_type> weak_holders;
-                for (int i = 0; i < 10000000; ++i) {
+                for (int i = 0; i < 10000; ++i) {
                     weak_holders.emplace_back(holder_original);
                 }
             }
@@ -178,7 +178,7 @@ int main() {
         std::jthread thread4{
             [&weak_holder_cp] {
                 std::vector<shared_int32_holder> holders3;
-                for (int i = 0; i < 10000000; ++i) {
+                for (int i = 0; i < 10000; ++i) {
                     holders3.emplace_back(weak_holder_cp.lock());
                 }
             }
