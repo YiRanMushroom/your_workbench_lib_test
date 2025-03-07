@@ -140,40 +140,45 @@ int main() {
     assert(test_set.empty());
 
     using shared_int32_holder = ywl::miscellaneous::shared_holder<holder_shared_int32_type>; {
-        std::vector<shared_int32_holder> holders1, holders2, holders3;
+        // std::vector<shared_int32_holder> holders1, holders2, holders3;
         shared_int32_holder holder_original = shared_int32_holder::create(100);
 
-        std::vector<shared_int32_holder::weak_type> weak_holders;
+        // std::vector<shared_int32_holder::weak_type> weak_holders;
 
         shared_int32_holder::weak_type weak_holder_cp(holder_original);
 
         std::jthread thread1{
-            [&holders1, &holder_original] {
-                for (int i = 0; i < 100000; ++i) {
+            [&holder_original] {
+                std::vector<shared_int32_holder> holders1;
+                for (int i = 0; i < 10000000; ++i) {
                     holders1.emplace_back(holder_original);
                 }
             }
         };
 
         std::jthread thread2{
-            [&holders2, &holder_original] {
-                for (int i = 0; i < 100000; ++i) {
+            [&holder_original] {
+                std::vector<shared_int32_holder> holders2;
+                for (int i = 0; i < 10000000; ++i) {
+
                     holders2.emplace_back(holder_original);
                 }
             }
         };
 
         std::jthread thread3{
-            [&holder_original, &weak_holders] {
-                for (int i = 0; i < 100000; ++i) {
+            [&holder_original] {
+                std::vector<shared_int32_holder::weak_type> weak_holders;
+                for (int i = 0; i < 10000000; ++i) {
                     weak_holders.emplace_back(holder_original);
                 }
             }
         };
 
         std::jthread thread4{
-            [&holders3, &weak_holder_cp] {
-                for (int i = 0; i < 100000; ++i) {
+            [&weak_holder_cp] {
+                std::vector<shared_int32_holder> holders3;
+                for (int i = 0; i < 10000000; ++i) {
                     holders3.emplace_back(weak_holder_cp.lock());
                 }
             }
