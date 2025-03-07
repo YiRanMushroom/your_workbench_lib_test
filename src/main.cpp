@@ -67,21 +67,21 @@ static_assert(ywl::miscellaneous::is_shared_resource_holder_hint_type<holder_sha
 int main() {
     auto &&logger = ywl::util::default_logger;
 
-    std::string str = "Hello, World!";
+    std::string str = "Str1, Str2!";
 
     ywl::miscellaneous::simple_buffer buffer{};
     buffer.push_back(str);
 
     logger[buffer.pop_back<std::string>()];
 
-    std::vector<std::string> vec = {"Hello", "World", "!"};
+    std::vector<std::string> vec = {"Str1", "Str2", "!"};
     buffer.push_back(vec);
 
     logger[buffer.pop_back<std::vector<std::string> >()];
 
     std::unordered_map<std::string, std::tuple<int, double, std::string> > map = {
-        {"Hello", {1, 3.14, "World"}},
-        {"World", {2, 6.28, "!"}}
+        {"Str1", {1, 3.14, "Str2"}},
+        {"Str2", {2, 6.28, "!"}}
     };
 
     buffer.push_back(map);
@@ -139,47 +139,54 @@ int main() {
 
     assert(test_set.empty());
 
-    using shared_int32_holder = ywl::miscellaneous::shared_holder<holder_shared_int32_type>;
-    // std::cout << "test_set.size(): " << test_set.size() << std::endl;
-
-    // block
-    {
-        std::vector<shared_int32_holder> holders1, holders2;
+    using shared_int32_holder = ywl::miscellaneous::shared_holder<holder_shared_int32_type>; {
+        std::vector<shared_int32_holder> holders1, holders2, holders3;
         shared_int32_holder holder_original = shared_int32_holder::create(100);
 
         std::vector<shared_int32_holder::weak_type> weak_holders;
 
         shared_int32_holder::weak_type weak_holder_cp(holder_original);
 
-        std::jthread thread1([&holders1, &holder_original] {
-            for (int i = 0; i < 100000; ++i) {
-                holders1.emplace_back(holder_original);
+        std::jthread thread1{
+            [&holders1, &holder_original] {
+                for (int i = 0; i < 100000; ++i) {
+                    holders1.emplace_back(holder_original);
+                }
             }
-        });
+        };
 
-        std::jthread thread3([&holder_original, &weak_holders] {
-            for (int i = 0; i < 100000; ++i) {
-                weak_holders.emplace_back(holder_original);
+        std::jthread thread2{
+            [&holders2, &holder_original] {
+                for (int i = 0; i < 100000; ++i) {
+                    holders2.emplace_back(holder_original);
+                }
             }
-        });
+        };
 
-        std::jthread thread2([&holders2, &holder_original] {
-            for (int i = 0; i < 100000; ++i) {
-                holders2.emplace_back(holder_original);
+        std::jthread thread3{
+            [&holder_original, &weak_holders] {
+                for (int i = 0; i < 100000; ++i) {
+                    weak_holders.emplace_back(holder_original);
+                }
             }
-        });
+        };
 
-        thread1.join();
-        std::jthread([&holders1, &weak_holder_cp] {
-            holders1.emplace_back(weak_holder_cp.lock());
-        }).join();
+        std::jthread thread4{
+            [&holders3, &weak_holder_cp] {
+                for (int i = 0; i < 100000; ++i) {
+                    holders3.emplace_back(weak_holder_cp.lock());
+                }
+            }
+        };
     }
 
     std::cout << "test_set.size(): " << test_set.size() << std::endl;
 
-    auto exception = ywl::basic::ywl_impl_error{"test exception"};
-
-    std::cout << exception.what() << std::endl;
+    try {
+        throw ywl::basic::runtime_error{"Runtime Error occurred!"};
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+    }
 
     return 0;
 }
