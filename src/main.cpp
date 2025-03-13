@@ -20,15 +20,6 @@ struct MyType {
     }
 };
 
-namespace ywl {
-    template<>
-    struct format_type_function_ud<MyType> {
-        static std::string to_string(const MyType &t) {
-            return t.to_string();
-        }
-    };
-}
-
 std::unordered_set<uint32_t> test_set;
 
 struct int32_constructor_type {
@@ -64,32 +55,44 @@ struct holder_shared_int32_type {
 
 static_assert(ywl::miscellaneous::is_shared_resource_holder_hint_type<holder_shared_int32_type>);
 
+struct agg {
+    int a;
+    double b;
+    std::string c;
+
+    std::string to_string(ywl_overload_flag_t) const {
+        return "{a: " + std::to_string(a) + ", b: " + std::to_string(b) + ", c: " + c + "}";
+    }
+};
+
 int main() {
     auto &&logger = ywl::util::default_logger;
+
+    using ywl::util::print, ywl::util::print_ln;
 
     std::string str = "Str1, Str2!";
 
     ywl::miscellaneous::simple_buffer buffer{};
     buffer.push_back(str);
 
-    logger[buffer.pop_back<std::string>()];
+    print_ln<", ">("buffer str", buffer.pop_back<std::string>(), agg{1, 2.0, "3"});
 
     std::vector<std::string> vec = {"Str1", "Str2", "!"};
     buffer.push_back(vec);
 
-    logger[buffer.pop_back<std::vector<std::string> >()];
+    logger[buffer.pop_back<std::vector<std::string>>()];
 
-    std::unordered_map<std::string, std::tuple<int, double, std::string> > map = {
+    std::unordered_map<std::string, std::tuple<int, double, std::string>> map = {
         {"Str1", {1, 3.14, "Str2"}},
         {"Str2", {2, 6.28, "!"}}
     };
 
     buffer.push_back(map);
 
-    logger[buffer.pop_back<std::unordered_map<std::string, std::tuple<int, double, std::string> > >()];
+    logger[buffer.pop_back<std::unordered_map<std::string, std::tuple<int, double, std::string>>>()];
 
     using unique_int32_holder = ywl::miscellaneous::unique_holder<ywl::miscellaneous::unique_hint_base_default<
-        uint32_t, int32_constructor_type, int32_destructor_type> >;
+        uint32_t, int32_constructor_type, int32_destructor_type>>;
     // additional tests for unique_holder
     {
         // Test default constructor and has_value
@@ -160,7 +163,6 @@ int main() {
             [&holder_original] {
                 std::vector<shared_int32_holder> holders2;
                 for (int i = 0; i < 10000; ++i) {
-
                     holders2.emplace_back(holder_original);
                 }
             }
