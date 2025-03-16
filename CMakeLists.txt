@@ -14,8 +14,7 @@ include(FetchContent)
 
 FetchContent_Declare(
         your_workbench_lib
-        GIT_REPOSITORY https://github.com/YiRanMushroom/Your_Workbench_Lib
-        GIT_TAG master
+        URL https://github.com/YiRanMushroom/Your_Workbench_Lib/archive/master.zip
 )
 
 FetchContent_MakeAvailable(your_workbench_lib)
