@@ -6,6 +6,10 @@ using namespace ywl::miscellaneous::multithreading;
 
 import ywl.basic.move_only_function;
 
+void foo() {
+
+}
+
 int main(int argc, char *argv[]) {
     thread_pool pool{32};
 
@@ -24,12 +28,20 @@ int main(int argc, char *argv[]) {
 
     using ywl::basic::move_only_function;
 
-    move_only_function<int(int)> f{[](int x) {
+    move_only_function f{[](int x) {
         return x * x;
     }};
 
+    move_only_function foo_fn{&foo};
+
+    std::function f2{
+            [](int x) {
+                return x * x;
+            }
+    };
+
     try {
-        move_only_function<int (*)(int)> other = std::move(f);
+        move_only_function other = std::move(f);
         other(0);
 
         f(0);
