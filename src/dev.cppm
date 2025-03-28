@@ -22,26 +22,11 @@ public:
 
     virtual void initial_schedule_task(co_awaitable_base *issuer, co_awaitable_base *co_awaitable) = 0;
 
-    virtual void schedule_dependency_of_current_task(co_awaitable_base *co_awaitable) = 0;
+    virtual void schedule_dependency_of_current_task(std::coroutine_handle<>, co_awaitable_base *co_awaitable) = 0;
 
     virtual void run() = 0;
 
     virtual void handle_finish(std::coroutine_handle<> co_awaitable) = 0;
-};
-
-// awaiter
-export class wait_for_current_executor_t {
-public:
-    // define awaiter functions
-    [[nodiscard]] bool await_ready() const {
-        return false;
-    }
-
-    void await_suspend(std::coroutine_handle<> issuer) {
-    }
-
-    void await_resume() {
-    }
 };
 
 export class simple_co_executor;
@@ -53,7 +38,6 @@ private:
     std::queue<std::coroutine_handle<>> m_queue;
     std::unordered_map<std::coroutine_handle<>, std::coroutine_handle<>> dependency_of;
     std::unordered_map<std::coroutine_handle<>, std::unordered_set<std::coroutine_handle<>>> depend_on;
-    std::coroutine_handle<> current_handle = nullptr;
 
 public:
     void initial_schedule_task(co_awaitable_base *issuer, co_awaitable_base *co_awaitable) override {
@@ -68,13 +52,13 @@ public:
         depend_on[issuer->get_handle()].insert(co_awaitable->get_handle());
     }
 
-    void schedule_dependency_of_current_task(co_awaitable_base *co_awaitable) override {
-        assert(current_handle != nullptr);
+    void schedule_dependency_of_current_task(std::coroutine_handle<> issuer, co_awaitable_base *co_awaitable) override {
+        assert(issuer != nullptr);
         //        ywl::printf_ln("Coroutine {} is added as a dependency of {}.", co_awaitable->get_handle().address(),
         //                       current_handle.address()).flush();
         m_queue.push(co_awaitable->get_handle());
-        dependency_of[co_awaitable->get_handle()] = current_handle;
-        depend_on[current_handle].insert(co_awaitable->get_handle());
+        dependency_of[co_awaitable->get_handle()] = issuer;
+        depend_on[issuer].insert(co_awaitable->get_handle());
     }
 
     void run() override {
@@ -89,7 +73,6 @@ public:
             }
 
             current_executor = this;
-            current_handle = handle;
 
             try {
                 //                ywl::printf_ln("Running coroutine: {}", handle.address()).flush();
@@ -184,7 +167,6 @@ public:
             std::rethrow_exception(std::current_exception());
         }
 
-        // return value
         void return_value(T value) {
             m_value = std::move(value);
         }
@@ -223,11 +205,11 @@ public:
     }
 
     [[nodiscard]] bool await_ready() const {
-        return m_handle.done();
+        return false;
     }
 
     void await_suspend(std::coroutine_handle<> issuer) {
-        current_executor->schedule_dependency_of_current_task(this);
+        current_executor->schedule_dependency_of_current_task(issuer, this);
     }
 
     T await_resume() {
@@ -268,7 +250,7 @@ public:
 
     void await_suspend(std::coroutine_handle<> issuer) {
         std::apply([&issuer](auto &... co_awaitables) {
-            ((current_executor->schedule_dependency_of_current_task(&co_awaitables)), ...);
+            ((current_executor->schedule_dependency_of_current_task(issuer, &co_awaitables)), ...);
         }, m_co_awaitables);
     }
 
