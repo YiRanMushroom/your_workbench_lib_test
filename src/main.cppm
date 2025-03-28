@@ -21,20 +21,15 @@ co_awaitable<int> await_int<0>() {
 }
 
 co_awaitable<int> add_many() {
-    int result{};
-    {
+    int result{}; {
         auto value = co_await await_int<1>();
         ywl::print_ln("value: ", value);
         result += value;
-    }
-
-    {
+    } {
         auto value = co_await await_int<2>();
         ywl::print_ln("value: ", value);
         result += value;
-    }
-
-    {
+    } {
         auto value = co_await await_int<3>();
         ywl::print_ln("value: ", value);
         result += value;
@@ -44,15 +39,8 @@ co_awaitable<int> add_many() {
 }
 
 co_awaitable<int> add_so_many() {
-    auto co_1 = await_int<1>();
-    auto co_2 = await_int<2>();
-    auto co_3 = await_int<3>();
-    auto co_4 = await_int<4>();
-    auto co_5 = await_int<5>();
-
-    current_executor->await_all(co_1, co_2, co_3, co_4, co_5);
-    co_await wait_for_current_executor_t{};
-    auto [r1, r2, r3, r4, r5] = current_executor->yield_all(co_1, co_2, co_3, co_4, co_5);
+    auto [r1, r2, r3, r4, r5] = co_await wait_all_of(await_int<1>(), await_int<2>(), await_int<3>(),
+                                                            await_int<4>(), await_int<5>());
     co_return r1 + r2 + r3 + r4 + r5;
 }
 
@@ -63,25 +51,25 @@ int main_catch(int argc, char *argv[]) {
     executor.run();*/
     auto co_context = co_context::from_executor<simple_co_executor>();
     ywl::print_ln("result: ", co_context.block_on(add_so_many()));
-/*    auto input_file1 = ywl::utils::read_or_create_file("input.txt");
-    auto input_file2 = ywl::utils::read_or_create_file("input/input2.txt");
+    /*    auto input_file1 = ywl::utils::read_or_create_file("input.txt");
+        auto input_file2 = ywl::utils::read_or_create_file("input/input2.txt");
 
-    auto output_file1 = ywl::utils::read_or_create_file("output.txt");
-    auto output_file2 = ywl::utils::read_or_create_file("output/output2.txt");
+        auto output_file1 = ywl::utils::read_or_create_file("output.txt");
+        auto output_file2 = ywl::utils::read_or_create_file("output/output2.txt");
 
-    std::deque<int> v1 = {1, 2, 3, 4, 5};
+        std::deque<int> v1 = {1, 2, 3, 4, 5};
 
-    auto strings =
-            v1 | ywl::overloads::ops::move() |
-            ywl::overloads::ops::mapped_to<std::vector<std::string>>([](int &&i) { return std::to_string(i); });
+        auto strings =
+                v1 | ywl::overloads::ops::move() |
+                ywl::overloads::ops::mapped_to<std::vector<std::string>>([](int &&i) { return std::to_string(i); });
 
-    strings | ywl::overloads::ops::for_each([](const std::string &s) { ywl::printf("{} ", s); });*/
+        strings | ywl::overloads::ops::for_each([](const std::string &s) { ywl::printf("{} ", s); });*/
 
     return 0;
 }
 
 int main(int argc, char **argv) {
-//    ywl::app::vm::run<main_catch>(argc, argv);
+    //    ywl::app::vm::run<main_catch>(argc, argv);
     try {
         main_catch(argc, argv);
     } catch (std::exception &e) {
