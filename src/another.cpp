@@ -1,3 +1,4 @@
+
 /*
 // google test
 #include <gtest/gtest.h>
@@ -56,7 +57,7 @@ TEST(ThreadSafeQueue, Priority_Queue) {
 
     std::function<void()> push = [&queue, &counter] {
         for (int i = 0; i < 1000; ++i) {
-            queue.emplace(counter++);
+            queue.initial_schedule_task(counter++);
         }
     };
 
@@ -100,7 +101,7 @@ TEST(MPMC_Channel, Basic_Queue) {
         std::function<void()> receive = [receiver, &finished] {
             while (!finished) {
                 auto value = receiver.receive_strong();
-                if (value.has_value()) {
+                if (value.finished()) {
                     ywl::print_ln("receive: ", value.value());
                 }
             }

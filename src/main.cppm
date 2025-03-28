@@ -5,88 +5,88 @@ module;
 export module main;
 
 import ywl.prelude;
+import dev;
+
+template<int value>
+co_awaitable<int> await_int() {
+    ywl::print_ln("In await_int: ", value);
+    int v = co_await await_int<value - 1>();
+    co_return value;
+}
+
+template<>
+co_awaitable<int> await_int<0>() {
+    ywl::print_ln("In await_int: 0");
+    co_return 0;
+}
+
+co_awaitable<int> add_many() {
+    int result{};
+    {
+        auto value = co_await await_int<1>();
+        ywl::print_ln("value: ", value);
+        result += value;
+    }
+
+    {
+        auto value = co_await await_int<2>();
+        ywl::print_ln("value: ", value);
+        result += value;
+    }
+
+    {
+        auto value = co_await await_int<3>();
+        ywl::print_ln("value: ", value);
+        result += value;
+    }
+
+    co_return result;
+}
+
+co_awaitable<int> add_so_many() {
+    auto co_1 = await_int<1>();
+    auto co_2 = await_int<2>();
+    auto co_3 = await_int<3>();
+    auto co_4 = await_int<4>();
+    auto co_5 = await_int<5>();
+
+    current_executor->await_all(co_1, co_2, co_3, co_4, co_5);
+    co_await wait_for_current_executor_t{};
+    auto [r1, r2, r3, r4, r5] = current_executor->yield_all(co_1, co_2, co_3, co_4, co_5);
+    co_return r1 + r2 + r3 + r4 + r5;
+}
 
 int main_catch(int argc, char *argv[]) {
-    std::vector<int> v{1, 2, 3, 4, 5, 6, 7, 8, 9};
+    /*co_executor executor;
+    auto result = add_many();
+    executor.initial_schedule_task(&result);
+    executor.run();*/
+    auto co_context = co_context::from_executor<simple_co_executor>();
+    ywl::print_ln("result: ", co_context.block_on(add_so_many()));
+/*    auto input_file1 = ywl::utils::read_or_create_file("input.txt");
+    auto input_file2 = ywl::utils::read_or_create_file("input/input2.txt");
 
-    assert(*ywl::basic::first_to_satisfy(v.begin(), v.end(), [](const int &x) {
-        return x > 5;
-        }).value() == 6);
+    auto output_file1 = ywl::utils::read_or_create_file("output.txt");
+    auto output_file2 = ywl::utils::read_or_create_file("output/output2.txt");
 
-    assert(*ywl::basic::last_to_satisfy(v.begin(), v.end(), [](const int &x) {
-        return x < 5;
-        }).value() == 4);
-
-    assert(ywl::basic::first_to_satisfy(v.begin(), v.end(), [](const int &x) {
-        return x > 9;
-        }) == std::nullopt);
-
-    assert(ywl::basic::last_to_satisfy(v.begin(), v.end(), [](const int &x) {
-        return x < 0;
-        }) == std::nullopt);
-
-    try {
-        ywl::basic::first_to_satisfy(v.begin(), v.end(), [](const int &x) {
-            return x < 5;
-        });
-    } catch (std::exception &e) {
-        ywl::err_print_ln(e.what());
-    }
-
-    try {
-        ywl::basic::last_to_satisfy(v.begin(), v.end(), [](const int &x) {
-            return x > 5;
-        });
-    } catch (std::exception &e) {
-        ywl::err_print_ln(e.what());
-    }
-
-    try {
-        throw ywl::basic::runtime_error("Test exception");
-    } catch (std::exception &e) {
-        ywl::err_print_ln(e.what());
-    }
-
-    std::optional<int> opt = 1;
-
-    static_assert(std::is_same_v<decltype(ywl::overloads::constexpr_pipe<[](auto &&x) -> decltype(auto) {
-        return std::forward<decltype(x)>(x).value();
-    }>()(opt)), int &>);
-
-    static_assert(std::is_same_v<decltype(std::move(opt) | ywl::overloads::pipe
-    ([]<typename T>(T &&x) -> decltype(auto) {
-        return std::forward<T>(x).value();
-    })), int &&>);
-
-    std::vector<int> v1{1, 2, 3, 4, 5, 6, 7, 8, 9};
-
-    v1 | ywl::overloads::ops::sort(std::greater<int>{});
-    for (const auto &x: v1) {
-        ywl::printf("{} ", x);
-    }
-
-    std::move(v1) | ywl::overloads::ops::map([](int &&x) {
-        return x * x;
-    });
-
-    for (const auto &x: v1) {
-        ywl::printf("{} ", x);
-    }
+    std::deque<int> v1 = {1, 2, 3, 4, 5};
 
     auto strings =
-            ywl::overloads::ops::mapped([](int &&x) {
-                return std::to_string(x);
-            })(ywl::overloads::ops::move()(v1));
+            v1 | ywl::overloads::ops::move() |
+            ywl::overloads::ops::mapped_to<std::vector<std::string>>([](int &&i) { return std::to_string(i); });
 
-    strings
-            | ywl::overloads::ops::clone()
-            | ywl::overloads::ops::for_each([](std::string &&s) {
-                ywl::print_ln(s);
-            });
+    strings | ywl::overloads::ops::for_each([](const std::string &s) { ywl::printf("{} ", s); });*/
 
     return 0;
 }
 
 int main(int argc, char **argv) {
-    ywl::app::vm::run<main_catch>(argc, argv);
+//    ywl::app::vm::run<main_catch>(argc, argv);
+    try {
+        main_catch(argc, argv);
+    } catch (std::exception &e) {
+        ywl::err_printf_ln("Exception: {}", e.what());
+    } catch (...) {
+        ywl::err_printf_ln("Unknown exception");
+    }
 }
