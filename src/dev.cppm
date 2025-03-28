@@ -98,17 +98,17 @@ public:
     }
 
     void handle_finish(std::coroutine_handle<> handle) {
-        //        ywl::printf_ln("{} is finished.", handle.address()).flush();
         auto issuer = dependency_of[handle];
         if (need_any_rather_than_all.contains(issuer)) {
             depend_on[issuer].erase(handle);
+            dependency_of.erase(handle);
+
             for (const auto &other: depend_on[issuer]) {
-                if (other != handle) {
-                    tasks_to_cancel.insert(other);
-                    cancel_all_dependencies_of(other);
-                }
+                tasks_to_cancel.insert(other);
+                cancel_all_dependencies_of(other);
                 dependency_of.erase(other);
             }
+
             depend_on.erase(issuer);
             need_any_rather_than_all.erase(issuer);
         } else {
@@ -126,6 +126,27 @@ public:
         m_queue.push(task);
         dependency_of[task] = issuer;
         depend_on[issuer].insert(task);
+    }
+
+    ~simple_co_executor() override {
+        if (!m_queue.empty()) {
+            ywl::err_printf_ln("Warning: not all coroutines were finished.").flush();
+        }
+
+        if (!depend_on.empty()) {
+            ywl::err_printf_ln("Warning: not all dependencies were finished.").flush();
+        }
+
+        if (!dependency_of.empty()) {
+            ywl::err_printf_ln("Warning: not all dependencies were finished.").flush();
+            for (const auto &[task, issuer]: dependency_of) {
+                ywl::err_printf_ln("Coroutine {} is waiting for {}.", issuer.address(), task.address()).flush();
+            }
+        }
+
+        if (!tasks_to_cancel.empty()) {
+            ywl::err_printf_ln("Warning: not all tasks were cancelled.").flush();
+        }
     }
 };
 
@@ -256,6 +277,7 @@ public:
     T block_on(co_awaitable<T> &&co_awaitable) {
         m_executor->initial_schedule_task(co_awaitable.get_handle());
         m_executor->run();
+//        ywl::printf_ln("Blocked on {} is finished.", co_awaitable.get_handle().address()).flush();
         return co_awaitable.get_value();
     }
 };
