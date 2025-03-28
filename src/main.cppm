@@ -77,7 +77,7 @@ int main_catch(int argc, char *argv[]) {
     executor.initial_schedule_task(&result);
     executor.run();*/
     auto co_context = co_context::from_executor<simple_co_executor>();
-    ywl::print_ln("result: ", co_context.block_on(test_wait_any_of()));
+    ywl::print_ln("result: ", co_context.block_on(add_so_many()));
 /*        auto input_file1 = ywl::utils::read_or_create_file("input.txt");
         auto input_file2 = ywl::utils::read_or_create_file("input/input2.txt");
 

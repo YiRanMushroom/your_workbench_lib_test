@@ -35,11 +35,12 @@ private:
     std::unordered_map <std::coroutine_handle<>, std::unordered_set<std::coroutine_handle<>>> depend_on;
 
     std::unordered_set <std::coroutine_handle<>> need_any_rather_than_all;
-    std::unordered_set <std::coroutine_handle<>> tasks_to_cancel;
+    std::unordered_set <std::coroutine_handle<>> m_queue_elements;
 
 public:
     void initial_schedule_task(std::coroutine_handle<> handle) override {
         m_queue.push(handle);
+        m_queue_elements.insert(handle);
     }
 
     void schedule_dependency_all(std::coroutine_handle<> issuer, std::coroutine_handle<> task) override {
@@ -47,6 +48,10 @@ public:
         //        ywl::printf_ln("Coroutine {} is added as a dependency of {}.", co_awaitable->get_handle().address(),
         //                       current_handle.address()).flush();
         m_queue.push(task);
+        m_queue_elements.insert(task);
+
+        m_queue_elements.erase(issuer);
+
         dependency_of[task] = issuer;
         depend_on[issuer].insert(task);
     }
@@ -56,14 +61,19 @@ public:
             auto handle = m_queue.front();
             m_queue.pop();
 
-            if (tasks_to_cancel.contains(handle)) {
-                tasks_to_cancel.erase(handle);
+            if (!m_queue_elements.contains(handle) || !handle) {
+                ywl::printf_ln("Coroutine {} is temporarily removed from the queue.", handle.address()).flush();
                 continue;
             }
 
+            m_queue_elements.erase(handle);
+
+            ywl::printf_ln("Processing coroutine: {}", handle.address()).flush();
+
             if (depend_on.contains(handle)) {
-//                ywl::printf_ln("Coroutine {} is waiting for dependencies.", handle.address()).flush();
+                ywl::printf_ln("Coroutine {} is waiting for dependencies.", handle.address()).flush();
                 m_queue.push(handle);
+                m_queue_elements.insert(handle);
                 continue;
             }
 
@@ -72,13 +82,16 @@ public:
             try {
 //                ywl::printf_ln("Running coroutine: {}", handle.address()).flush();
                 handle.resume();
-                if (!handle.done()) {
-//                    ywl::printf_ln("Coroutine {} is not finished.", handle.address()).flush();
-                    m_queue.push(handle);
-                } else {
-//                    ywl::printf_ln("Coroutine {} is finished.", handle.address()).flush();
+                if (handle.done()) {
                     handle_finish(handle);
                 }
+/*                if (!handle.done()) {
+                    ywl::printf_ln("Coroutine {} is not finished.", handle.address()).flush();
+                    m_queue.push(handle);
+                } else {
+                    ywl::printf_ln("Coroutine {} is finished.", handle.address()).flush();
+                    handle_finish(handle);
+                }*/
             } catch (const std::exception &e) {
                 //                ywl::printf_ln("Exception was thrown in coroutine: {}", e.what()).flush();
                 std::rethrow_exception(std::current_exception());
@@ -89,7 +102,7 @@ public:
     void cancel_all_dependencies_of(std::coroutine_handle<> handle) {
         if (depend_on.contains(handle)) {
             for (const auto &other: depend_on[handle]) {
-                tasks_to_cancel.insert(other);
+                m_queue_elements.erase(other);
                 cancel_all_dependencies_of(other);
                 dependency_of.erase(other);
             }
@@ -98,24 +111,39 @@ public:
     }
 
     void handle_finish(std::coroutine_handle<> handle) {
-        auto issuer = dependency_of[handle];
+        if (!dependency_of.contains(handle)) {
+            return;
+        }
+
+        auto issuer = dependency_of.at(handle);
+
         if (need_any_rather_than_all.contains(issuer)) {
-            depend_on[issuer].erase(handle);
+
+            assert(issuer);
+            depend_on.at(issuer).erase(handle);
             dependency_of.erase(handle);
 
-            for (const auto &other: depend_on[issuer]) {
-                tasks_to_cancel.insert(other);
+            for (const auto &other: depend_on.at(issuer)) {
+                m_queue_elements.erase(other);
                 cancel_all_dependencies_of(other);
                 dependency_of.erase(other);
             }
 
+
             depend_on.erase(issuer);
             need_any_rather_than_all.erase(issuer);
+
+            m_queue.push(issuer);
+            m_queue_elements.insert(issuer);
         } else {
-            depend_on[issuer].erase(handle);
-            if (depend_on[issuer].empty()) {
+            depend_on.at(issuer).erase(handle);
+
+            if (depend_on.at(issuer).empty()) {
                 depend_on.erase(issuer);
+                m_queue.push(issuer);
+                m_queue_elements.insert(issuer);
             }
+
             dependency_of.erase(handle);
         }
     }
@@ -123,7 +151,11 @@ public:
     void schedule_dependency_any(std::coroutine_handle<> issuer, std::coroutine_handle<> task) override {
 //        ywl::printf_ln("Coroutine {} is added as a dependency of {}.", task.address(), issuer.address()).flush();
         need_any_rather_than_all.insert(issuer);
+
+        m_queue_elements.erase(issuer);
+
         m_queue.push(task);
+        m_queue_elements.insert(task);
         dependency_of[task] = issuer;
         depend_on[issuer].insert(task);
     }
@@ -144,8 +176,11 @@ public:
             }
         }
 
-        if (!tasks_to_cancel.empty()) {
-            ywl::err_printf_ln("Warning: not all tasks were cancelled.").flush();
+        if (!m_queue_elements.empty()) {
+            ywl::err_printf_ln("Warning: not all coroutines were finished.").flush();
+            for (const auto &handle: m_queue_elements) {
+                ywl::err_printf_ln("Coroutine {} is not finished.", handle.address()).flush();
+            }
         }
     }
 };
