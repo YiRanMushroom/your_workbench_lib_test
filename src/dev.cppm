@@ -22,15 +22,7 @@ public:
 
     virtual void initial_schedule_task(co_awaitable_base *issuer, co_awaitable_base *co_awaitable) = 0;
 
-    virtual void reschedule_task(co_awaitable_base *co_awaitable) = 0;
-
     virtual void schedule_dependency_of_current_task(co_awaitable_base *co_awaitable) = 0;
-
-    template<typename... Args>
-    void await_all(co_awaitable<Args> &... co_awaitables);
-
-    template<typename... Args>
-    static std::tuple<Args...> yield_all(co_awaitable<Args> &... co_awaitables);
 
     virtual void run() = 0;
 
@@ -74,11 +66,6 @@ public:
 
         dependency_of[co_awaitable->get_handle()] = issuer->get_handle();
         depend_on[issuer->get_handle()].insert(co_awaitable->get_handle());
-    }
-
-    void reschedule_task(co_awaitable_base *co_awaitable) override {
-        //        ywl::printf_ln("Coroutine {} is rescheduled.", co_awaitable->get_handle().address()).flush();
-        m_queue.push(co_awaitable->get_handle());
     }
 
     void schedule_dependency_of_current_task(co_awaitable_base *co_awaitable) override {
@@ -211,20 +198,6 @@ public:
         }
 
         ~promise_type() = default;
-
-        // await_transform
-        /*template<typename U>
-        auto &&await_transform(co_awaitable<U> &&co_awaitable) {
-            return co_awaitable;
-        }*/
-
-        decltype(auto) await_transform(auto &&arg) {
-            return arg;
-        }
-
-        wait_for_current_executor_t await_transform(wait_for_current_executor_t &&wait_for_current_executor) {
-            return wait_for_current_executor;
-        }
     };
 
 private:
@@ -277,16 +250,6 @@ T co_context::block_on(co_awaitable<T> &&co_awaitable) {
     m_executor->initial_schedule_task(nullptr, &co_awaitable);
     m_executor->run();
     return co_awaitable.get_value();
-}
-
-template<typename... Args>
-void co_executor_base::await_all(co_awaitable<Args> &... co_awaitables) {
-    ((this->schedule_dependency_of_current_task(&co_awaitables)), ...);
-}
-
-template<typename... Args>
-std::tuple<Args...> co_executor_base::yield_all(co_awaitable<Args> &... co_awaitables) {
-    return std::tuple<Args...>(co_awaitables.get_value()...);
 }
 
 template<typename... Args>
